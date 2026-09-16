@@ -48,5 +48,5 @@ __pycache__/
 
 *.pyc
 # Firebase Admin private key
-credentials/firebase-key.json
+firebase-key.json
 google-services.json
