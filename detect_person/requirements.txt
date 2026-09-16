@@ -1,0 +1,9 @@
+<<<<<<< HEAD
+opencv-python
+numpy
+requests
+=======
+opencv-python
+numpy
+requests
+>>>>>>> e9c4bb4de6487f0343579edf12926d46b1325b5c
