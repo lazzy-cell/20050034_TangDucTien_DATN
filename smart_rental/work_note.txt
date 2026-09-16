@@ -1,0 +1,11 @@
+pip install -r requirements.txt
+
+python -m venv venv
+
+venv\Scripts\activate
+py app.py
+
+ptree -i __pycache__ venv
+
+admin@smartrental.local
+Admin@123456

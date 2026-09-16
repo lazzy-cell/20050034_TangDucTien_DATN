@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Smart Rental — Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+<div class="flex min-h-screen">
+  <aside class="w-60 shrink-0 border-r border-slate-800 bg-slate-900/90 flex flex-col sticky top-0 h-screen">
+    <div class="h-14 px-4 flex items-center border-b border-slate-800">
+      <div><div class="text-sm font-semibold">Smart Rental</div><div class="text-[10px] text-slate-500">Quản lý nhà trọ</div></div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <button class="nav-item active" data-page="overview">Tổng quan</button>
+      <button class="nav-item" data-page="rooms">Phòng trọ</button>
+      <button class="nav-item" data-page="tenants">Khách thuê</button>
+      <button class="nav-item" data-page="contracts">Hợp đồng</button>
+      <button class="nav-item" data-page="billing">Hóa đơn & TT</button>
+      <button class="nav-item" data-page="analytics">Thống kê</button>
+      <button class="nav-item" data-page="occupancy">Occupancy / CV</button>
+      <button class="nav-item" data-page="alerts">Cảnh báo</button>
+      <button class="nav-item" data-page="notifications">Thông báo</button>
+      <button class="nav-item" data-page="settings">Cài đặt</button>
+    </nav>
+    <div class="p-3 border-t border-slate-800 space-y-2">
+      <div id="userLabel" class="text-xs text-slate-400 px-2 truncate"></div>
+      <button id="logoutBtn" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-700 hover:border-red-500/50 hover:text-red-400">Đăng xuất</button>
+    </div>
+  </aside>
+  <div class="flex-1 min-w-0 flex flex-col">
+    <header class="h-14 border-b border-slate-800 bg-slate-900/60 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 backdrop-blur">
+      <h1 id="pageTitle" class="font-semibold">Tổng quan</h1>
+      <button id="refreshBtn" class="btn-secondary text-sm">Làm mới</button>
+    </header>
+    <main class="flex-1 p-4 sm:p-6 overflow-auto">
+      <section id="page-overview" class="page-section space-y-6">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <div class="kpi-card"><div class="kpi-label">Tổng phòng</div><div id="kpiTotal" class="kpi-value">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Thiết bị online</div><div id="kpiOnline" class="kpi-value text-emerald-400">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Công suất hiện tại</div><div id="kpiPower" class="kpi-value text-amber-400">— <small>W</small></div></div>
+          <div class="kpi-card"><div class="kpi-label">Điện hôm nay</div><div id="kpiToday" class="kpi-value text-sky-400">— <small>kWh</small></div></div>
+          <div class="kpi-card"><div class="kpi-label">Occupancy</div><div id="kpiOccupied" class="kpi-value text-violet-400">—</div></div>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="stat-chip"><span>Hóa đơn chưa trả</span><b id="billUnpaid">—</b></div>
+          <div class="stat-chip"><span>Đã thanh toán</span><b id="billPaid">—</b></div>
+          <div class="stat-chip"><span>Doanh thu</span><b id="billRevenue">—</b></div>
+          <div class="stat-chip"><span>Còn nợ</span><b id="billDebt">—</b></div>
+        </div>
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div class="card p-4"><h2 class="text-sm font-semibold mb-3">Công suất theo phòng</h2><div class="chart-wrap"><canvas id="chartPower"></canvas></div></div>
+          <div class="card p-4"><h2 class="text-sm font-semibold mb-3">Occupancy</h2><div class="chart-wrap chart-wrap-sm"><canvas id="chartOccupancy"></canvas></div></div>
+        </div>
+        <div><h2 class="text-sm font-semibold mb-3">Phòng & nguồn điện nhanh</h2><div id="overviewRooms" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div></div>
+      </section>
+
+      <section id="page-rooms" class="page-section hidden space-y-4">
+        <div class="flex flex-wrap justify-between gap-3"><p class="text-sm text-slate-400">Quản lý phòng và điều khiển nguồn điện.</p><div class="flex gap-2"><button class="btn-sm ok" id="btnBatchOn">Bật điện đã chọn</button><button class="btn-sm warn" id="btnBatchOff">Ngắt điện đã chọn</button><button class="btn-primary" id="btnAddRoom">+ Thêm phòng</button></div></div>
+        <div class="flex items-center gap-3 text-xs text-slate-400"><label class="flex items-center gap-2"><input type="checkbox" id="roomsSelectAll"> Chọn tất cả</label><span id="roomsSelectedCount">0 phòng được chọn</span></div>
+        <div id="roomsTable" class="table-wrap"></div>
+      </section>
+
+      <section id="page-tenants" class="page-section hidden space-y-4">
+        <div class="flex justify-between gap-3"><p class="text-sm text-slate-400">Quản lý thông tin khách thuê và tài khoản app.</p><button class="btn-primary" id="btnAddTenant">+ Khách thuê mới</button></div>
+        <div id="tenantsTable" class="table-wrap"></div>
+      </section>
+
+      <section id="page-contracts" class="page-section hidden space-y-4">
+        <div class="flex justify-between items-center gap-3"><div class="flex items-center gap-2"><p class="text-sm text-slate-400">Lọc:</p><select id="contractFilter" class="input-sm"><option value="">Tất cả</option><option value="active">Đang hiệu lực</option><option value="ended">Đã kết thúc</option><option value="cancelled">Đã hủy</option></select></div><button class="btn-primary" id="btnAddContract">+ Tạo hợp đồng</button></div>
+        <div id="contractsTable" class="table-wrap"></div>
+      </section>
+
+      <section id="page-billing" class="page-section hidden space-y-4">
+        <div class="card p-4">
+          <div class="flex flex-wrap items-end gap-3">
+            <div><label class="label">Lọc phòng</label><select id="billingRoom" class="input"><option value="">Tất cả phòng</option></select></div>
+            <div><label class="label">Kỳ</label><input type="month" id="billingPeriod" class="input"></div>
+            <button class="btn-secondary" id="btnFilterBills">Lọc</button>
+            <button class="btn-primary" id="btnGenerateBill">+ Tạo hóa đơn từ hợp đồng</button>
+          </div>
+        </div>
+        <div id="billsTable" class="table-wrap"></div>
+        <div><h3 class="text-sm font-semibold mb-2">Lịch sử thanh toán</h3><div id="paymentsTable" class="table-wrap"></div></div>
+      </section>
+
+      <section id="page-analytics" class="page-section hidden space-y-4">
+        <div class="card p-4">
+          <div class="flex flex-wrap items-end gap-3">
+            <div><label class="label">Khoảng thống kê</label><select id="analyticsGranularity" class="input"><option value="day">Ngày</option><option value="week">Tuần</option><option value="month" selected>Tháng</option><option value="year">Năm</option></select></div>
+            <span id="analyticsRangeLabel" class="text-xs text-slate-500 pb-2"></span>
+            <button id="btnLoadAnalytics" class="btn-primary">Xem thống kê</button>
+          </div>
+        </div>
+        <div id="analyticsCards" class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3"></div>
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div class="card p-4"><h3 class="text-sm font-semibold mb-3">Điện tiêu thụ theo thời gian</h3><div class="chart-wrap"><canvas id="chartEnergy"></canvas></div></div>
+          <div class="card p-4"><h3 class="text-sm font-semibold mb-3">Doanh thu theo thời gian</h3><div class="chart-wrap"><canvas id="chartRevenue"></canvas></div></div>
+        </div>
+        <div class="card p-4"><h3 class="text-sm font-semibold mb-3">Hóa đơn theo thời gian</h3><div class="chart-wrap"><canvas id="chartBills"></canvas></div></div>
+        <div class="card p-4"><h3 class="text-sm font-semibold mb-3">Điện năng theo phòng</h3><div id="analyticsBillHistory" class="table-wrap"></div></div>
+      </section>
+
+      <section id="page-occupancy" class="page-section hidden space-y-4"><div class="grid grid-cols-3 gap-3" id="occSummary"></div><div id="occupancyList" class="space-y-2"></div></section>
+
+      <section id="page-alerts" class="page-section hidden space-y-4">
+        <div class="flex justify-between gap-3"><div><p class="text-sm font-medium">Trung tâm cảnh báo</p><p class="text-xs text-slate-500">Điện năng · thiết bị · tự động hóa</p></div><div class="flex gap-2"><select id="alertFilter" class="input-sm"><option value="active">Đang active</option><option value="">Tất cả</option><option value="resolved">Đã xử lý</option></select><button id="btnReloadAlerts" class="btn-secondary">Làm mới</button></div></div>
+        <div id="alertStats" class="grid grid-cols-3 gap-3"></div><div id="alertsList" class="space-y-2"></div>
+        <h3 class="text-sm font-semibold mt-6">Lịch sử điều khiển nguồn</h3><div id="historyList" class="space-y-2"></div>
+      </section>
+
+      <section id="page-notifications" class="page-section hidden space-y-4">
+        <div class="grid lg:grid-cols-2 gap-4"><div class="card p-5 space-y-4"><h3 class="font-semibold text-sm">Soạn thông báo</h3><input id="notifTitle" class="input" placeholder="Tiêu đề"><textarea id="notifBody" class="input" rows="4" placeholder="Nội dung"></textarea><select id="notifTarget" class="input"><option value="all_tenants">Tất cả khách thuê</option><option value="tenant">Một khách thuê</option><option value="landlords">Chủ trọ (test)</option></select><div id="notifTenantWrap" class="hidden"><select id="notifTenantId" class="input"></select></div><button id="btnSendNotif" class="btn-primary">Gửi thông báo</button></div><div class="card p-5"><h3 class="font-semibold text-sm mb-3">Lịch sử gửi</h3><div id="notifLogs"></div></div></div>
+      </section>
+
+      <section id="page-settings" class="page-section hidden space-y-4">
+        <p class="text-sm text-slate-400">Cấu hình hệ thống.</p>
+        <div class="card p-5 max-w-2xl space-y-4"><h3 class="font-semibold text-sm">Cài đặt hệ thống</h3><div><label class="label">Giá điện (VND/kWh)</label><input type="number" id="settingPrice" class="input"></div><div class="grid grid-cols-2 gap-3"><div><label class="label">Ngưỡng công suất (W)</label><input type="number" id="settingHighPower" class="input"></div><div><label class="label">Ngưỡng dòng (A)</label><input type="number" id="settingHighCurrent" class="input"></div></div><label class="flex gap-2 text-sm"><input type="checkbox" id="settingAutoCut"> Tự ngắt điện khi quá tải</label><button class="btn-primary" id="btnSaveSettings">Lưu cài đặt</button></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4"><div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto"><div class="px-5 py-4 border-b border-slate-800 flex justify-between sticky top-0 bg-slate-900"><h3 id="modalTitle" class="font-semibold"></h3><button id="modalClose" class="text-xl">&times;</button></div><div id="modalBody" class="p-5"></div></div></div>
+<div id="confirmModal" class="fixed inset-0 z-[55] hidden items-center justify-center bg-black/70 p-4"><div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md"><div class="p-5"><h3 id="confirmTitle" class="font-semibold"></h3><p id="confirmMessage" class="text-sm text-slate-400 mt-2"></p></div><div class="p-4 flex justify-end gap-2"><button id="confirmCancel" class="btn-secondary">Hủy</button><button id="confirmOk" class="btn-primary">Xác nhận</button></div></div></div>
+<div id="toast" class="fixed bottom-6 right-6 z-[60] hidden"></div>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth-compat.js"></script>
+<script src="/static/js/firebase.js?v=20260915-occupancy-heartbeat"></script><script src="/static/js/api.js?v=20260915-occupancy-heartbeat"></script><script src="/static/js/dashboard.js?v=20260915-occupancy-heartbeat"></script>
+</body></html>
